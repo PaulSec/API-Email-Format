@@ -45,7 +45,7 @@ def get_mails(url):
     res = []
     for mail in soup.findAll('div', attrs={'class': 'fl'}):
         mailAdress = sanitize_string(mail.text)
-        if '@' in mailAdress:
+        if '@' in mailAdress and not 'e.g.' in mailAdress:
             res.append(mailAdress)
     return res
 
