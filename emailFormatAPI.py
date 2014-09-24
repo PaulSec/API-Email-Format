@@ -77,7 +77,7 @@ def main():
         for company in companies:
             print '%s' % (company)
         index = raw_input('Select company: ')
-        mails = get_mails('http://www.email-format.com/i/search_result/?q=%s' % index)
+        mails = get_mails('http://www.email-format.com%s' % companies[index])
         print mails
         # print companies[index]
         # print companies
