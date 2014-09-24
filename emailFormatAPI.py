@@ -1,90 +1,94 @@
+"""
+This is the (unofficial) Python API for email-format.com Website.
+
+Using this code, you can retrieve emails from the specified company
+
+"""
 #!/bin/python
 # coding: utf-8
 
-import sys
 import requests
 from bs4 import BeautifulSoup
-import re
-from optparse import OptionParser
-import json
 
-VERBOSE_MODE = False
+URL = "http://www.email-format.com"
+# VERBOSE_MODE = False
 
-def display_message(s):
-    global VERBOSE_MODE
-    if VERBOSE_MODE:
-        print '[verbose] %s' % s
+#def display_message(s):
+#    global VERBOSE_MODE
+#    if VERBOSE_MODE:
+#        print '[verbose] %s' % s
 
-def request_results(company_name):
-    return requests.get('http://www.email-format.com/i/search_result/?q=%s' % (company_name)).content
 
-def company_exists(content):
-    return 'No results found for' not in content
+class EmailFormatAPI(object):
 
-def multiple_companies(content):
-    return 'Search for Domains' in content
+    """
+        EmailFormatAPI Main Handler
+    """
 
-def iterate_on_all_companies(content):
-    soup = BeautifulSoup(content)
-    companies = {}
-    for company in soup.findAll('a', attrs={'class': 'block'}):
-        # sanitize retrieved results
-        companyName = sanitize_string(company.text)
-        companyUrl = sanitize_string(company['href'])
+    _instance = None
 
-        # print companyName + ' ' + companyUrl
-        companies[companyName] = companyUrl
-    return companies
+    def __new__(cls, *args, **kwargs):
+        """
+            __new__ builtin
+        """
+        if not cls._instance:
+            cls._instance = super(EmailFormatAPI, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
 
-def sanitize_string(string):
-    return string.replace('\n', '').replace('\t', '').replace(' ', '')
+    def search_company(self, company_name):
+        return requests.get('%s/i/search_result/?q=%s' % (URL, company_name)).content
 
-def get_mails(url):
-    req = requests.get(url)
-    soup = BeautifulSoup(req.content)
-    res = []
-    for mail in soup.findAll('div', attrs={'class': 'fl'}):
-        mailAdress = sanitize_string(mail.text)
-        if '@' in mailAdress and not 'e.g.' in mailAdress:
-            res.append(mailAdress)
-    return res
+    def company_exists(self, content):
+        return 'No results found for' not in content
 
-def main():
-    global VERBOSE_MODE
-    parser = OptionParser()
-    parser.add_option("-c", "--company", dest="company", help="Company you want to retrieve mails", default=None)
-    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="Verbose mode")
+    def multiple_companies(self, content):
+        return 'Search for Domains' in content
 
-    (options, args) = parser.parse_args()
+    def iterate_on_all_companies(self, content):
+        soup = BeautifulSoup(content)
+        companies = {}
+        for company in soup.findAll('a', attrs={'class': 'block'}):
+            # sanitize retrieved results
+            companyName = self.sanitize_string(company.text)
+            companyUrl = self.sanitize_string(company['href'])
 
-    if options.verbose:
-        VERBOSE_MODE = True
+            # print companyName + ' ' + companyUrl
+            companies[companyName] = companyUrl
+        return companies
 
-    if options.company is not None:
-        print 'Fetching result for company "%s"' % (options.company)
-    else:
-        print parser.print_help()
-        sys.exit(-1)
+    def sanitize_string(self, string):
+        return string.replace('\n', '').replace('\t', '').replace(' ', '')
 
-    # no results
-    req = request_results(options.company)
-    if (not company_exists(req)):
-        print 'Company %s does not exist.' % (options.company)
+    def get_mails(self, content):
+        soup = BeautifulSoup(content)
+        res = []
+        for mail in soup.findAll('div', attrs={'class': 'fl'}):
+            mailAdress = self.sanitize_string(mail.text)
+            if '@' in mailAdress and not 'e.g.' in mailAdress:
+                res.append(mailAdress)
+        return res
 
-    # several companies
-    if (multiple_companies(req)):
-        companies = iterate_on_all_companies(req)
-        for company in companies:
-            print '%s' % (company)
-        index = raw_input('Select company: ')
-        mails = get_mails('http://www.email-format.com%s' % companies[index])
-        print mails
-        # print companies[index]
-        # print companies
-    else:
-        # one company
-        mails = get_mails('http://www.email-format.com/i/search_result/?q=%s' % (options.company))
-        print mails
+    def get(self, company):
+        print 'Fetching result for company "%s"' % (company)
 
-if __name__ == '__main__':
-    main()
+        req = requests.get('%s/d/%s/' % (URL, company))
+        # company cannot be accessed directly
+        if '/i/main/' in req.url:
+            req = self.search_company(company)
+            # if does not exist
+            if (not self.company_exists(req)):
+                print 'Company %s does not exist.' % (company)
+                return []
+            # if multiple choice
+            if (self.multiple_companies(req)):
+                companies = self.iterate_on_all_companies(req)
+                for company in companies:
+                    print '%s' % (company)
+                index = raw_input('Select company: ')
+                req = requests.get('%s%s' % (URL, companies[index]))
+                mails = self.get_mails(req.content)
+        else:
+            # can be accessed directly
+            mails = self.get_mails(req.content)
+        return mails
