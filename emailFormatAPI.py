@@ -37,7 +37,7 @@ class EmailFormatAPI(object):
         return cls._instance
 
     def search_company(self, company_name):
-        return requests.get('%s/i/search_result/?q=%s' % (URL, company_name)).content
+        return requests.get('%s/i/search_result/?q=%s' % (URL, company_name))
 
     def company_exists(self, content):
         return 'No results found for' not in content
@@ -77,12 +77,17 @@ class EmailFormatAPI(object):
         if '/i/main/' in req.url:
             req = self.search_company(company)
             # if does not exist
-            if (not self.company_exists(req)):
+            if (not self.company_exists(req.content)):
                 print 'Company %s does not exist.' % (company)
                 return []
+
+            # if single choice
+            if 'email-format.com/d/' in req.url:
+                mails = self.get_mails(req.content)
+
             # if multiple choice
-            if (self.multiple_companies(req)):
-                companies = self.iterate_on_all_companies(req)
+            if (self.multiple_companies(req.content)):
+                companies = self.iterate_on_all_companies(req.content)
                 for company in companies:
                     print '%s' % (company)
                 index = raw_input('Select company: ')
