@@ -11,7 +11,6 @@ import requests
 from bs4 import BeautifulSoup
 
 URL = "http://www.email-format.com"
-# VERBOSE_MODE = False
 
 #def display_message(s):
 #    global VERBOSE_MODE
@@ -26,6 +25,10 @@ class EmailFormatAPI(object):
     """
 
     _instance = None
+    _verbose = False
+
+    def __init__(self, arg=None):
+        pass
 
     def __new__(cls, *args, **kwargs):
         """
@@ -34,7 +37,13 @@ class EmailFormatAPI(object):
         if not cls._instance:
             cls._instance = super(EmailFormatAPI, cls).__new__(
                 cls, *args, **kwargs)
+            if (args and args[0] and args[0]['verbose']):
+                cls._verbose = True
         return cls._instance
+
+    def display_message(self, s):
+        if (self._verbose):
+            print '[verbose] %s' % s
 
     def search_company(self, company_name):
         return requests.get('%s/i/search_result/?q=%s' % (URL, company_name))
@@ -53,7 +62,7 @@ class EmailFormatAPI(object):
             companyName = self.sanitize_string(company.text)
             companyUrl = self.sanitize_string(company['href'])
 
-            # print companyName + ' ' + companyUrl
+            self.display_message(companyName + ' ' + companyUrl)
             companies[companyName] = companyUrl
         return companies
 
@@ -70,7 +79,7 @@ class EmailFormatAPI(object):
         return res
 
     def get(self, company):
-        print 'Fetching result for company "%s"' % (company)
+        self.display_message('Fetching result for company "%s"' % (company))
 
         req = requests.get('%s/d/%s/' % (URL, company))
         # company cannot be accessed directly
@@ -78,7 +87,7 @@ class EmailFormatAPI(object):
             req = self.search_company(company)
             # if does not exist
             if (not self.company_exists(req.content)):
-                print 'Company %s does not exist.' % (company)
+                self.display_message('Company %s does not exist.' % (company))
                 return []
 
             # if single choice
@@ -89,7 +98,7 @@ class EmailFormatAPI(object):
             if (self.multiple_companies(req.content)):
                 companies = self.iterate_on_all_companies(req.content)
                 for company in companies:
-                    print '%s' % (company)
+                    self.display_message('%s' % (company))
                 index = raw_input('Select company: ')
                 req = requests.get('%s%s' % (URL, companies[index]))
                 mails = self.get_mails(req.content)
