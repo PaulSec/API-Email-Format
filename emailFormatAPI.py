@@ -98,7 +98,7 @@ class EmailFormatAPI(object):
             if (self.multiple_companies(req.content)):
                 companies = self.iterate_on_all_companies(req.content)
                 for company in companies:
-                    self.display_message('%s' % (company))
+                    print '%s' % (company)
                 index = raw_input('Select company: ')
                 req = requests.get('%s%s' % (URL, companies[index]))
                 mails = self.get_mails(req.content)
